@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collinea | Voice Virtual Assistant</title>
+    <style>
+
+        *{
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        .body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            flex-direction: column;
+        }
+
+        #big-circle {
+            width: 200px;
+            height: 200px;
+            background-color: #3498db;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wave {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid #3498db;
+            animation: ripple 2s linear;
+        }
+
+        .status-container{
+
+            width: 100%;
+            text-align: center;
+            padding: 15px;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="body">
+
+        <div id="big-circle" onclick="createRipple(event)"></div>
+
+
+        <div class="status-container">
+
+            <h3 id="listening-status"></h3>
+            <br>
+            <p id="transcript"></p>
+    
+        </div>
+
+    </div>
+
+   
+    
+    
+
+    <script>
+
+        let disabled = false;
+
+
+
+        const runSpeechRecog = async () => {
+     
+            let recognization = new webkitSpeechRecognition();
+            let transcript;
+            recognization.onstart = () => {
+                document.getElementById("listening-status").style.display = "block";
+               document.getElementById("listening-status").innerText = "Listening...";
+            }
+            recognization.onresult = async (e) => {
+
+                document.getElementById("listening-status").style.display = "none";
+                // document.getElementById("transcript").style.display = "block";
+                
+               transcript = e.results[0][0].transcript;
+
+               document.getElementById("transcript").innerText = transcript;
+
+               console.log(transcript)
+
+
+               const getNLPResponse = async ()=>{
+
+                const response = await fetch("http://localhost:5000/message/new",{
+                headers: {"Content-Type":"application/json"},
+                method:"POST",
+                body: JSON.stringify({message:transcript})
+            });
+
+            const data = await response.json();
+            console.log(data)
+            return data.response;
+
+
+
+               }
+
+               const aiResponse = await getNLPResponse();
+
+               document.getElementById("transcript").innerText = aiResponse;
+
+
+               try {
+                const response = await fetch(`/speech?text=${aiResponse}`);
+                // const response = await fetch(`/speech?text=${transcript}`);
+                const audioBlob = await response.blob();
+
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+            document.getElementById("big-circle").innerText.innerHTML = transcript;
+            //    document.getElementById("big-circle").innerText.innerHTML = "";
+            }
+            recognization.start();
+
+            return transcript;
+         }
+
+  
+       const createRipple = async (event) => {
+
+            if(disabled){
+                return
+            }
+            const ripple = document.createElement('div');
+            ripple.className = 'wave';
+            
+            const rect = event.target.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            ripple.style.width = ripple.style.height = Math.max(rect.width, rect.height) + 'px';
+            ripple.style.left = x - ripple.offsetWidth / 2 + 'px';
+            ripple.style.top = y - ripple.offsetHeight / 2 + 'px';
+
+            document.getElementById('big-circle').appendChild(ripple);
+
+            setTimeout(() => {
+                ripple.remove();
+            }, 2000);
+
+
+           await runSpeechRecog();
+
+
+        }
+    </script>
+</body>
+</html>
