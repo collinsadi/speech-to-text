@@ -85,7 +85,7 @@
 
         const runSpeechRecog = async () => {
      
-            let recognization = new webkitSpeechRecognition();
+            let recognization = new webkitSpeechRecognition() || window.SpeechRecognition;
             let transcript;
             recognization.onstart = () => {
                 document.getElementById("listening-status").style.display = "block";
